@@ -6,13 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import dynamic from 'next/dynamic';
 import CkeditorOzel from './ckeditor';
 import { FormTemplateContext, CustomField, FormData} from '@/contexts/FormTemplateContext';
-
+import { usePathname } from 'next/navigation';
 
 const DynamicCkeditorOzel = dynamic(() => import('./ckeditor'), {
     ssr: false, // Disable SSR for this component
 });
-
-
 
 export interface Reference {
   id: string;
@@ -28,10 +26,6 @@ export interface DynamicDbData {
   documentTypes: Array<{ id: string; name: string }>;
   subContractorNames: Array<{ id: string; name: string }>;
 }
-
-
-
-
 
 interface TemplateFormAppProps {
   children: React.ReactNode;
@@ -144,6 +138,7 @@ function TemplatePanel() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [templateName, setTemplateName] = useState<string>('');
+  const pathname = usePathname();
 
   if (!context) throw new Error('TemplatePanel must be used within a FormTemplateContext Provider');
 
@@ -311,6 +306,11 @@ function TemplatePanel() {
           border-radius: 4px;
           box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+        ${pathname.includes('CreateForm') ? `
+          .editor-container_document-editor .editor-container__editor .ck.ck-editor__editable {
+            min-width: calc(210mm + 2px) !important;
+          }
+        ` : ''}
       `}</style>
     </div>
   );
