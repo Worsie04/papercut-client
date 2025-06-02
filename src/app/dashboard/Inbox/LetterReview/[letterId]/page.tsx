@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Spin, Alert, Button, Typography, Row, Col, message, Tag, Modal, Input, Select, List, Avatar, Space, Tooltip, Image as AntImage, Card } from 'antd';
 import {
     ArrowLeftOutlined, CheckOutlined, CloseOutlined, SendOutlined, HistoryOutlined,
     SyncOutlined, QrcodeOutlined, InfoCircleOutlined,
 } from '@ant-design/icons';
-import { getCurrentUser } from '@/utils/api';
+import { getCurrentUser, getUserSignatures, getUserStamps } from '@/utils/api';
 import axios from 'axios';
 import CkeditorOzel from '../../../CreateLetter/ckeditor_letter';
 import { v4 as uuidv4 } from 'uuid';
@@ -274,6 +274,10 @@ export default function LetterHtmlReviewPage() {
     const [placingItem, setPlacingItem] = useState<PlacingItemInfo | null>(null);
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState<string>('');
+    
+    // Comment functionality
+    const [newComment, setNewComment] = useState<string>('');
+    const [isAddingComment, setIsAddingComment] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -336,6 +340,52 @@ export default function LetterHtmlReviewPage() {
             } catch (e) { console.error("Failed to load/parse stamps", e); setSavedStamps([]); }
         }
     }, []);
+
+    // Load signatures from database
+    const loadSignatures = useCallback(async () => {
+        try {
+            const signaturesFromDB = await getUserSignatures();
+            
+            // Map API response to match expected interface
+            const mappedSignatures = signaturesFromDB.map(sig => ({
+                id: sig.id,
+                r2Url: sig.publicUrl, // API returns 'publicUrl'
+                name: sig.filename,
+                createdAt: sig.createdAt
+            }));
+            
+            setSavedSignatures(mappedSignatures);
+        } catch (error: any) {
+            console.error('Error loading signatures from database:', error);
+            setSavedSignatures([]);
+        }
+    }, []);
+
+    // Load stamps from database
+    const loadStamps = useCallback(async () => {
+        try {
+            const stampsFromDB = await getUserStamps();
+            
+            // Map API response to match expected interface
+            const mappedStamps = stampsFromDB.map(stamp => ({
+                id: stamp.id,
+                r2Url: stamp.publicUrl, // API returns 'publicUrl'
+                name: stamp.filename,
+                createdAt: stamp.createdAt
+            }));
+            
+            setSavedStamps(mappedStamps);
+        } catch (error: any) {
+            console.error('Error loading stamps from database:', error);
+            setSavedStamps([]);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Load signatures and stamps from database
+        loadSignatures();
+        loadStamps();
+    }, [loadSignatures, loadStamps]);
 
     useEffect(() => {
         if (isReassignModalVisible && letterDetails) {
@@ -587,6 +637,29 @@ export default function LetterHtmlReviewPage() {
         }
     };
 
+    const handleAddComment = async () => {
+        if (!letterId || !currentUser?.id || !newComment.trim()) {
+            message.error("Comment cannot be empty.");
+            return;
+        }
+        setIsAddingComment(true);
+        message.loading({ content: 'Adding comment...', key: 'add-comment' });
+        try {
+            const endpoint = `/letters/${letterId}/comment`;
+            const payload = { comment: newComment.trim() };
+            await apiRequest(endpoint, 'POST', payload);
+            message.success({ content: 'Comment added successfully!', key: 'add-comment', duration: 2 });
+            setNewComment('');
+            // Refresh letter data to show new comment
+            const details = await apiRequest<LetterDetails>(`/letters/${letterId}`);
+            setLetterDetails(details);
+        } catch (apiError: any) {
+            message.error({ content: `Failed to add comment: ${apiError.message || 'Unknown error'}`, key: 'add-comment', duration: 4 });
+        } finally {
+            setIsAddingComment(false);
+        }
+    };
+
     const renderActionButtons = () => {
         if (isUserLoading) return <Spin size="small" />;
 
@@ -831,6 +904,33 @@ export default function LetterHtmlReviewPage() {
                                         disabled={isActionLoading}
                                     />
                                     {canTakeAction && <Text type="secondary" className='text-xs block mt-1'>This comment/reason will be saved when you click Reject or Reassign.</Text>}
+                                </div>
+                            )}
+
+                            {/* Add Comment Section - Available for all users */}
+                            {currentUser && letterDetails && !showActionCommentArea && !isSubmitterOfRejectedLetter && (
+                                <div className='pt-3 border-t'>
+                                    <Title level={5} style={{ marginBottom: '8px' }}>Add Comment</Title>
+                                    <Space.Compact style={{ width: '100%' }} direction="vertical">
+                                        <TextArea
+                                            rows={3}
+                                            placeholder="Add your comment about this letter..."
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            disabled={isAddingComment}
+                                            maxLength={500}
+                                            showCount
+                                        />
+                                        <Button 
+                                            type="primary" 
+                                            onClick={handleAddComment} 
+                                            loading={isAddingComment}
+                                            disabled={!newComment.trim() || isAddingComment}
+                                            style={{ marginTop: '8px', alignSelf: 'flex-end' }}
+                                        >
+                                            Add Comment
+                                        </Button>
+                                    </Space.Compact>
                                 </div>
                             )}
 

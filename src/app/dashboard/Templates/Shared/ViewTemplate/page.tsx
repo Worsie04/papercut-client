@@ -4,9 +4,10 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { API_URL } from '@/app/config';
 import { message, Spin, Card, Typography, Button, Alert } from 'antd';
-import { LeftOutlined } from '@ant-design/icons';
+import { LeftOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import axios from 'axios';
 import CkeditorOzel from '../../../CreateLetter/ckeditor_letter';
+import { refreshFavoriteTemplates } from '@/components/Sidebar';
 
 interface TemplateData {
     id: string;
@@ -64,10 +65,29 @@ async function fetchSharedTemplateById(templateId: string): Promise<TemplateData
     return response.data;
 }
 
+async function toggleFavoriteApi(templateId: string): Promise<boolean> {
+    const config = getAuthHeaders();
+    const response = await axios.post(`${API_URL}/templates/${templateId}/favorite`, {}, config);
+    return response.data.isFavorite;
+}
+
+async function getFavoriteStatusApi(templateId: string): Promise<boolean> {
+    const config = getAuthHeaders();
+    try {
+        const response = await axios.get(`${API_URL}/templates/${templateId}/favorite`, config);
+        return response.data.isFavorite || false;
+    } catch (error) {
+        return false;
+    }
+}
+
 function ViewSharedTemplateContent() {
     const [templateData, setTemplateData] = useState<TemplateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -83,6 +103,11 @@ function ViewSharedTemplateContent() {
                 try {
                     const fetchedTemplate = await fetchSharedTemplateById(templateId);
                     setTemplateData(fetchedTemplate);
+
+                    // Fetch favorite status
+                    const favoriteStatus = await getFavoriteStatusApi(templateId);
+                    setIsFavorite(favoriteStatus);
+
                 } catch (err: any) {
                     console.error("Error loading shared template data:", err);
                     let specificError = 'Şablon yüklənərkən xəta baş verdi.';
@@ -107,6 +132,24 @@ function ViewSharedTemplateContent() {
             message.warning(msg);
         }
     }, [templateId]);
+
+    const handleToggleFavorite = async () => {
+        if (!templateId) return;
+        setIsTogglingFavorite(true);
+        try {
+            const newFavoriteStatus = await toggleFavoriteApi(templateId);
+            setIsFavorite(newFavoriteStatus);
+            message.success(newFavoriteStatus ? 'Şablon favorite-lərə əlavə edildi!' : 'Şablon favorite-lərdən silindi!');
+            
+            // Refresh sidebar favorites
+            refreshFavoriteTemplates();
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.error || err.message || 'Favorite əməliyyatında xəta baş verdi.';
+            message.error(errorMsg);
+        } finally {
+            setIsTogglingFavorite(false);
+        }
+    };
 
     const renderContentWithLabels = (text: string): string => {
         if (!text) return '';
@@ -167,19 +210,25 @@ function ViewSharedTemplateContent() {
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
                     <Button icon={<LeftOutlined />} onClick={() => router.push('/dashboard/Templates/Shared')}> Paylaşılanlara Qayıt </Button>
                     <Typography.Title level={4} className="mb-0 text-center flex-grow px-4 truncate" title={templateData.name || "Adsız Şablon"}> {templateData.name || "Adsız Şablon"} </Typography.Title>
-                    <div style={{ width: 'auto', minWidth:'88px' }}></div> {/* Placeholder to help balance title */}
+                    <Button 
+                        icon={isFavorite ? <StarFilled /> : <StarOutlined />} 
+                        onClick={handleToggleFavorite}
+                        loading={isTogglingFavorite}
+                        type={isFavorite ? "primary" : "default"}
+                    > 
+                        {isFavorite ? 'Favorite-dədir' : 'Favorite-ə əlavə et'} 
+                    </Button>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8 text-sm font-serif leading-relaxed shadow-inner">
-                    {/* <div dangerouslySetInnerHTML={{ __html: renderContentWithLabels(templateData.content) }} /> */}
                     <div className="ck-editor-wrapper">
-                                        <CkeditorOzel
-                                            onChange={() => {}}
-                                            initialData={templateData.content}
-                                            customFields={[]}
-                                            readOnly={true}
-                                        />
-                                        </div>
+                        <CkeditorOzel
+                            onChange={() => {}}
+                            initialData={templateData.content}
+                            customFields={[]}
+                            readOnly={true}
+                        />
+                    </div>
                 </div>
             </Card>
         </div>

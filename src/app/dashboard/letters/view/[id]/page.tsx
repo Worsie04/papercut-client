@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Spin, Alert, Typography, Button, Descriptions, Card, message, Space, Tooltip, Image as AntImage } from 'antd';
-import { ArrowLeftOutlined, ZoomInOutlined, ZoomOutOutlined, UndoOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Spin, Alert, Typography, Button, Descriptions, Card, message, Space, Tooltip, Image as AntImage, Modal, List, Avatar } from 'antd';
+import { ArrowLeftOutlined, ZoomInOutlined, ZoomOutOutlined, UndoOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined } from '@ant-design/icons';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
@@ -13,6 +13,34 @@ import CkeditorOzel from '../../../CreateLetter/ckeditor_letter';
 pdfjs.GlobalWorkerOptions.workerSrc = `/lib/pdfjs/pdf.worker.min.mjs`;
 
 const { Title, Text, Paragraph } = Typography;
+
+interface UserInfo { 
+    id: string; 
+    firstName?: string | null; 
+    lastName?: string | null; 
+    email: string; 
+    avatar?: string | null; 
+}
+
+interface ActionLog { 
+    id: string; 
+    userId: string; 
+    actionType: string; 
+    comment?: string | null; 
+    details?: any; 
+    createdAt: string; 
+    user?: UserInfo | null; 
+}
+
+interface ReviewerStep { 
+    id: string; 
+    userId: string; 
+    sequenceOrder: number; 
+    status: string; 
+    actedAt?: string | null; 
+    reassignedFromUserId?: string | null; 
+    user?: UserInfo | null; 
+}
 
 interface PlacementInfo {
     id?: string;
@@ -44,6 +72,8 @@ interface LetterDetail {
     signatureUrl?: string | null;
     stampUrl?: string | null;
     placements?: PlacementInfo[] | null;
+    letterActionLogs?: ActionLog[] | null;
+    letterReviewers?: ReviewerStep[] | null;
     template?: {
         id: string;
         name: string;
@@ -75,6 +105,36 @@ async function apiRequest<T>(endpoint: string, method: 'GET' | 'POST' = 'GET', b
     }
     return await response.json() as T;
 }
+
+async function deleteLetterApi(letterId: string): Promise<void> {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    const config: RequestInit = { method: 'DELETE', headers, credentials: 'include' };
+    const response = await fetch(`${API_URL}/letters/${letterId}`, config);
+    if (!response.ok) {
+        let errorData: any = { message: `HTTP error! status: ${response.status}` };
+        try {
+            errorData = await response.json();
+        } catch (e) {}
+        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+    }
+}
+
+// Helper functions for displaying user information and action types
+const formatActionType = (action: string): string => { 
+    return action?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown Action'; 
+};
+
+const getUserFullName = (user?: UserInfo | null): string => { 
+    if (!user) return 'System/Unknown'; 
+    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unnamed User'; 
+};
+
+const getInitials = (user?: UserInfo | null): string => { 
+    if (!user) return 'S'; 
+    const first = user.firstName?.[0] || ''; 
+    const last = user.lastName?.[0] || ''; 
+    return (first + last).toUpperCase() || user.email?.[0].toUpperCase() || '?'; 
+};
 
 // Component to display template-based letter with proper placements of signature, stamp, and QR code
 function TemplateLetter({ 
@@ -356,6 +416,7 @@ const LetterViewPageContent = () => {
     const [numPages, setNumPages] = useState<number | null>(null);
     const [pageNumber, setPageNumber] = useState<number>(1);
     const [pdfScale, setPdfScale] = useState<number>(1.0);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDownloadClick = () => {
         if (pdfViewUrl) {
@@ -431,18 +492,43 @@ const LetterViewPageContent = () => {
     const goToPrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
     const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages || 1));
 
-    // Determine letter type and display mode
+    const handleDeleteLetter = () => {
+        if (!letterId) return;
+        Modal.confirm({
+            title: 'Move Letter to Trash',
+            icon: <ExclamationCircleOutlined />,
+            content: `Are you sure you want to move "${letterData?.name || `Letter ID: ${letterId.substring(0,8)}...`}" to trash? You can restore it later from the Trash section.`,
+            okText: 'Yes, Move to Trash',
+            okType: 'danger',
+            cancelText: 'Cancel',
+            centered: true,
+            maskClosable: true,
+            onOk: async () => {
+                setIsDeleting(true);
+                const key = 'deletingLetter';
+                message.loading({ content: 'Moving letter to trash...', key });
+                try {
+                    await deleteLetterApi(letterId);
+                    message.success({ content: 'Letter moved to trash successfully!', key, duration: 2 });
+                    router.push('/dashboard/letters');
+                } catch (err: any) {
+                    message.error({ content: err.message || 'Error moving letter to trash.', key, duration: 4 });
+                    setIsDeleting(false);
+                }
+            },
+            onCancel: () => { setIsDeleting(false); }
+        });
+    };
+
+
     const isSignedPdf = !!(letterData?.finalSignedPdfUrl || letterData?.signedPdfUrl);
     const isTemplateBased = !!letterData?.templateId && !!(letterData?.formData || letterData?.content);
     
-    // Choose display mode - if we have a PDF and it's either:
-    // 1. A PDF-based letter OR
-    // 2. An approved template-based letter with final PDF
     const showPdfViewer = isSignedPdf && 
         (!isTemplateBased || 
         (isTemplateBased && letterData?.workflowStatus === 'approved' && !!pdfViewUrl));
     
-    // Show template viewer for template-based letters
+
     const showTemplateViewer = isTemplateBased;
 
     if (loading) {
@@ -460,14 +546,27 @@ const LetterViewPageContent = () => {
     return (
         <div className="flex flex-col min-h-screen p-4 md:p-8 bg-gray-100">
             <Card bordered={false} className="shadow-lg rounded-lg mb-6">
-                <Button
-                    icon={<ArrowLeftOutlined />}
-                    type="text"
-                    onClick={() => router.back()}
-                    style={{ marginBottom: '15px' }}
-                >
-                    Back
-                </Button>
+                <div className="flex justify-between items-center">
+                    <Button
+                        icon={<ArrowLeftOutlined />}
+                        type="text"
+                        onClick={() => router.back()}
+                        style={{ marginBottom: '15px' }}
+                    >
+                        Back
+                    </Button>
+                    <Button
+                        icon={<DeleteOutlined />}
+                        type="primary"
+                        danger
+                        onClick={handleDeleteLetter}
+                        loading={isDeleting}
+                        disabled={isDeleting}
+                        style={{ marginBottom: '15px' }}
+                    >
+                        Move to Trash
+                    </Button>
+                </div>
                 <Title level={3} className="text-center">{letterData.name || 'Letter Details'}</Title>
             </Card>
 
@@ -615,6 +714,51 @@ const LetterViewPageContent = () => {
                         description="Letter type is unclear or necessary data is missing."
                         type="warning"
                         showIcon
+                    />
+                </Card>
+            )}
+
+            {/* Action History & Comments Section */}
+            {letterData.letterActionLogs && letterData.letterActionLogs.length > 0 && (
+                <Card bordered={false} className="shadow-lg rounded-lg">
+                    <Title level={4} className="mb-4">
+                        <HistoryOutlined /> Action History & Comments
+                    </Title>
+                    <List 
+                        itemLayout="horizontal" 
+                        dataSource={letterData.letterActionLogs?.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? []} 
+                        locale={{ emptyText: "No actions logged yet." }}
+                        renderItem={item => (
+                            <List.Item>
+                                <List.Item.Meta
+                                    avatar={<Avatar src={item.user?.avatar}>{getInitials(item.user)}</Avatar>}
+                                    title={
+                                        <>
+                                            <Text strong>{formatActionType(item.actionType)}</Text>
+                                            {' by '}
+                                            <Text>{getUserFullName(item.user)}</Text>
+                                        </>
+                                    }
+                                    description={
+                                        <>
+                                            <Text type="secondary">{new Date(item.createdAt).toLocaleString()}</Text>
+                                            {item.comment && (
+                                                <Paragraph
+                                                    ellipsis={{ rows: 3, expandable: true, symbol: 'more' }}
+                                                    className={`mt-1 mb-0 p-3 rounded border ${
+                                                        item.actionType === 'reject_review' || item.actionType === 'final_reject'
+                                                            ? 'bg-red-50 border-red-100'
+                                                            : 'bg-gray-50 border-gray-100'
+                                                    }`}
+                                                >
+                                                    {item.comment}
+                                                </Paragraph>
+                                            )}
+                                        </>
+                                    }
+                                />
+                            </List.Item>
+                        )}
                     />
                 </Card>
             )}

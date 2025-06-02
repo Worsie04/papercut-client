@@ -7,10 +7,14 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'space_approval' | 'space_rejection' | 'space_reassignment' | 'space_creation';
+  type: 'space_approval' | 'space_rejection' | 'space_reassignment' | 'space_creation' | 'space_deletion' |
+        'cabinet_approval' | 'cabinet_rejection' | 'cabinet_reassignment' | 'cabinet_creation' | 'cabinet_deletion' | 'cabinet_update' | 'cabinet_resubmitted' |
+        'record_approval' | 'record_rejection' | 'record_reassignment' | 'record_creation' | 'record_deletion' | 'record_update' | 'record_modification' |
+        'template_share' | 'template_update' | 'template_delete' |
+        'letter_review_request' | 'letter_review_approved' | 'letter_review_rejected' | 'letter_final_approved' | 'letter_final_rejected';
   read: boolean;
   entityId?: string;
-  entityType?: 'space' | 'record' | 'cabinet';
+  entityType?: 'space' | 'record' | 'cabinet' | 'template' | 'letter';
   createdAt: string;
   updatedAt: string;
 }
@@ -44,7 +48,7 @@ class NotificationService {
 
   async markAllAsRead(): Promise<void> {
     try {
-      await axios.patch(`${API_URL}/notifications/read-all`, {}, this.getAuthHeaders());
+      await axios.put(`${API_URL}/notifications/read/all`, {}, this.getAuthHeaders());
     } catch (error) {
       throw this.handleError(error);
     }

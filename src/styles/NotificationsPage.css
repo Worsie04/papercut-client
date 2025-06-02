@@ -1,16 +1,139 @@
 .notifications-page {
-    padding: 20px;
-    background-color: #f9f9f9;
+  padding: 24px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.notification-item {
+  cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+  border: 1px solid #e6e6e6;
+  background-color: #ffffff;
+}
+
+.notification-item:hover {
+  background-color: #f8f9fa !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.notification-item.unread {
+  border-left: 4px solid #1890ff;
+  background-color: #e6f7ff;
+}
+
+.notification-item.unread:hover {
+  background-color: #bae7ff !important;
+}
+
+/* Animation for notification items */
+.notification-item {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar for list */
+.ant-list {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.ant-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ant-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.ant-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.ant-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Header styling */
+.notifications-page .ant-typography h2 {
+  margin-bottom: 0 !important;
+  color: #262626;
+}
+
+/* Empty state styling */
+.ant-list-empty-text {
+  color: #8c8c8c;
+  font-size: 16px;
+}
+
+/* Tag styling */
+.ant-tag {
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Loading state */
+.notifications-loading {
+  text-align: center;
+  padding: 50px 0;
+  color: #8c8c8c;
+}
+
+/* Button styling */
+.notifications-page .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.notifications-page .ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+.notifications-page .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* List item meta styling */
+.ant-list-item-meta-title {
+  margin-bottom: 8px !important;
+}
+
+.ant-list-item-meta-description {
+  color: #595959 !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .notifications-page {
+    padding: 16px;
   }
   
   .notification-item {
-    cursor: pointer;
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.2s ease;
+    margin-bottom: 12px;
   }
   
-  .notification-item:hover {
-    background-color: #f0f0f0;
+  .notifications-page .ant-typography h2 {
+    font-size: 20px;
   }
+}
   

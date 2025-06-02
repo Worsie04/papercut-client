@@ -48,7 +48,7 @@ const NavigationBar = () => {
             if (!currentUser) return;
             try {
                 const fetchedNotifications = await notificationService.getNotifications();
-                console.log('Fetched notifications:', fetchedNotifications);
+                //console.log('Fetched notifications:', fetchedNotifications);
                 setNotifications(fetchedNotifications);
                 const count = fetchedNotifications.filter(notification => !notification.read).length;
                 setUnreadCount(count);
@@ -93,6 +93,27 @@ const NavigationBar = () => {
         }
     };
 
+    // Helper function to fetch letter details with all fields
+    const fetchLetterDetails = async (letterId) => {
+        const headers = { 'Content-Type': 'application/json' };
+        const config = { method: 'GET', headers, credentials: 'include' };
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/letters/${letterId}`, config);
+        
+        if (!response.ok) {
+            let errorData = { message: `HTTP error! Status: ${response.status}` };
+            try { 
+                errorData = await response.json(); 
+            } catch (e) { }
+            throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+        }
+        
+        if (response.status === 204) return undefined;
+        try { 
+            return await response.json(); 
+        } catch (e) { 
+            return undefined; 
+        }
+    };
 
     // --- YENİ handleNotificationClick Funksiyası ---
     const handleNotificationClick = async (notification) => {
@@ -107,14 +128,38 @@ const NavigationBar = () => {
             setNotifications(updatedNotifications);
 
             setUnreadCount(updatedNotifications.filter(n => !n.isRead).length);
-            console.log(`Notification marked as read: ${notification}`);
+            console.log(`Notification marked as read: ${notification.id}`);
 
-            if (notification.type === 'letter') {
-                router.push(`/dashboard/LetterReview/${notification.entityId}`);
-                console.log(`Navigating to LetterReview for ID: ${notification.entityId}`);
+            // Handle different notification types
+            if (notification.entityType === 'letter' && notification.entityId) {
+                try {
+                    // Fetch letter details using the direct API call (includes originalPdfFileId)
+                    const letterData = await fetchLetterDetails(notification.entityId);
+                    
+                    // Determine letter type based on originalPdfFileId (same logic as Inbox)
+                    const isTemplateBasedLetter = letterData.originalPdfFileId === null;
+                    
+                    if (isTemplateBasedLetter) {
+                        router.push(`/dashboard/Inbox/LetterReview/${notification.entityId}`);
+                        console.log(`Navigating to LetterReview for template-based letter ID: ${notification.entityId}`);
+                    } else {
+                        router.push(`/dashboard/Inbox/LetterPdfReview/${notification.entityId}`);
+                        console.log(`Navigating to LetterPdfReview for PDF-based letter ID: ${notification.entityId}`);
+                    }
+                } catch (fetchError) {
+                    console.error('Error fetching letter details:', fetchError);
+                    // Fallback to template-based letter if fetch fails
+                    router.push(`/dashboard/Inbox/LetterReview/${notification.entityId}`);
+                }
             } else {
-                router.push(`/dashboard/LetterPdfReview/${notification.entityId}`);
-                console.log(`Navigating to LetterPdfReview for ID: ${notification.entityId}`);
+                // Handle other notification types (legacy handling)
+                if (notification.type === 'letter') {
+                    router.push(`/dashboard/LetterReview/${notification.entityId}`);
+                    console.log(`Navigating to legacy LetterReview for ID: ${notification.entityId}`);
+                } else {
+                    router.push(`/dashboard/LetterPdfReview/${notification.entityId}`);
+                    console.log(`Navigating to legacy LetterPdfReview for ID: ${notification.entityId}`);
+                }
             }
 
             setQuickNotificationsVisible(false); // Close dropdown after navigation

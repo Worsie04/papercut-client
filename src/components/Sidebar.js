@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { API_URL } from '@/app/config';
-
+import axios from 'axios';
 
 const SidebarItem = memo(({ href, icon, label, collapsed }) => {
   const pathname = usePathname();
@@ -27,14 +27,73 @@ const SidebarItem = memo(({ href, icon, label, collapsed }) => {
 
 SidebarItem.displayName = 'SidebarItem';
 
+const getAuthHeaders = () => {
+  return {
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    withCredentials: true,
+  };
+};
+
+// Global function to refresh favorite templates
+let refreshFavoritesGlobal = null;
+
+export const refreshFavoriteTemplates = () => {
+  if (refreshFavoritesGlobal) {
+    refreshFavoritesGlobal();
+  }
+};
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [isFavoriteExpanded, setIsFavoriteExpanded] = useState(true);
   const [isNavigationExpanded, setIsNavigationExpanded] = useState(true);
   const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(false);
-  const [followedCabinets, setFollowedCabinets] = useState([]);
+  const [favoriteTemplates, setFavoriteTemplates] = useState([]);
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
+  // Fetch favorite templates and determine current user
+  const fetchFavoriteTemplates = async () => {
+    try {
+      setIsLoadingFavorites(true);
+      const config = getAuthHeaders();
+      const response = await axios.get(`${API_URL}/templates/favorites`, config);
+      
+      console.log('Favorites API response:', response.data);
+      
+      if (response.data.success) {
+        setFavoriteTemplates(response.data.templates || []);
+        // Set current user ID from the API response
+        if (response.data.currentUserId) {
+          setCurrentUserId(response.data.currentUserId);
+          console.log('Current user ID set to:', response.data.currentUserId);
+        }
+      } else {
+        setFavoriteTemplates([]);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching favorite templates:', error);
+      setFavoriteTemplates([]);
+    } finally {
+      setIsLoadingFavorites(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFavoriteTemplates();
+    
+    // Set global refresh function
+    refreshFavoritesGlobal = fetchFavoriteTemplates;
+    
+    // Cleanup on unmount
+    return () => {
+      refreshFavoritesGlobal = null;
+    };
+  }, []);
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
@@ -52,6 +111,31 @@ const Sidebar = () => {
     setIsTemplatesExpanded(!isTemplatesExpanded);
   };
 
+  // Helper function to determine the correct link for a favorite template
+  const getTemplateLink = (template) => {
+    if (!template || !currentUserId) {
+      console.log('No template or currentUserId, defaulting to Shared view', { template: template?.id, currentUserId });
+      return `/dashboard/Templates/Shared/ViewTemplate?templateId=${template.id}`;
+    }
+    
+    // If template belongs to current user, link to Created view
+    // If template belongs to someone else, link to Shared view
+    const isOwnTemplate = template.user && template.user.id === currentUserId;
+    
+    console.log('Template ownership check:', {
+      templateId: template.id,
+      templateName: template.name,
+      templateUserId: template.user?.id,
+      currentUserId,
+      isOwnTemplate
+    });
+    
+    if (isOwnTemplate) {
+      return `/dashboard/Templates/Created/ViewTemplate?templateId=${template.id}`;
+    } else {
+      return `/dashboard/Templates/Shared/ViewTemplate?templateId=${template.id}`;
+    }
+  };
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -163,10 +247,11 @@ const Sidebar = () => {
                     </ul>
                   )}
                    </div>
-            <div className="sidebar-section">
+            <div className=" sidebar-section">
               <div 
                 className={`active sidebar-title ${collapsed ? 'hidden' : ''}`} 
                 onClick={toggleFavoriteSection}
+                style={{ cursor: 'pointer' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <StarOutlined style={{ marginRight: '8px' }} />
@@ -176,17 +261,24 @@ const Sidebar = () => {
               </div>
               {isFavoriteExpanded && (
                 <ul>
-                  {followedCabinets.map((cabinet) => (
-                    <li key={cabinet.id}>
-                      <Link href={`/dashboard/Cabinet/${cabinet.id}`}>
-                        <StarOutlined style={{ color: '#1890ff' }} />
-                        <span className={collapsed ? 'hidden' : ''}> {cabinet.name}</span>
-                      </Link>
-                    </li>
-                  ))}
-                  {followedCabinets.length === 0 && (
+                  {isLoadingFavorites ? (
                     <li className="no-favorites">
-                      <span className={collapsed ? 'hidden' : ''}>No favorite cabinets yet</span>
+                      <span className={collapsed ? 'hidden' : ''}>Loading favorites...</span>
+                    </li>
+                  ) : favoriteTemplates.length > 0 ? (
+                    favoriteTemplates.map((template) => (
+                      <li key={template.id}>
+                        <Link href={getTemplateLink(template)}>
+                          <StarOutlined style={{ color: '#1890ff',marginRight: '8px' }} />
+                          <span className={collapsed ? 'hidden' : ''} title={template.name || 'Untitled Template'}>
+                            {collapsed ? '' : (template.name?.length > 20 ? `${template.name.substring(0, 20)}...` : template.name || 'Untitled Template')}
+                          </span>
+                        </Link>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="no-favorites">
+                      <span className={collapsed ? 'hidden' : ''}>No favorite templates yet</span>
                     </li>
                   )}
                 </ul>

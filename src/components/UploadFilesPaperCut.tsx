@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, Button, Spin, Table, Typography, Modal, message, Image as AntImage, Alert, Tooltip, Select, Space, List, Progress } from 'antd';
+import { Card, Button, Spin, Table, Typography, Modal, message, Image as AntImage, Alert, Tooltip, Select, Space, List, Progress, Input } from 'antd';
 import type { TableProps } from 'antd';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,11 +8,14 @@ import Uppy from '@uppy/core';
 import XHRUpload from '@uppy/xhr-upload';
 import { ZoomInOutlined, ZoomOutOutlined, UndoOutlined, PlusOutlined, ArrowUpOutlined, ArrowDownOutlined, DeleteOutlined, UploadOutlined, SyncOutlined, QrcodeOutlined } from '@ant-design/icons'; // Added QrcodeOutlined
 import Cookies from 'js-cookie';
+import { getUserSignatures, getUserStamps } from '@/utils/api'; // Import signature and stamp API functions
 import '@uppy/core/dist/style.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `/lib/pdfjs/pdf.worker.min.mjs`;
+
+const { TextArea } = Input;
 
 interface SignatureData { id: string; r2Url: string; name?: string; createdAt: string }
 interface StampData { id: string; r2Url: string; name?: string; createdAt: string }
@@ -49,7 +52,7 @@ interface PlacementInfoForBackend {
     height: number;
 }
 
-interface SaveSignedLetterPayload_Interactive { originalFileId: string; placements: PlacementInfoForBackend[]; reviewers?: string[]; approver?: string; name?: string }
+interface SaveSignedLetterPayload_Interactive { originalFileId: string; placements: PlacementInfoForBackend[]; reviewers?: string[]; approver?: string; name?: string; comment?: string }
 interface SavedLetterResponse { id: string; letterUrl: string }
 type UppyMetaData = { storage: string; markAsUnallocated: boolean }
 type UppyBody = Record<string, unknown>
@@ -112,6 +115,9 @@ const UploadAndSignPdf: React.FC = () => {
     const [uploadProgress, setUploadProgress] = useState<number>(0)
     const [uploadingFileName, setUploadingFileName] = useState<string | null>(null)
     const [pageDimensions, setPageDimensions] = useState<{ [key: number]: { width: number; height: number } }>({})
+
+    // ADDED: State for submission comment
+    const [submissionComment, setSubmissionComment] = useState<string>('')
 
     const fetchUnallocatedFiles = useCallback(async () => {
         setLoadingFiles(true)
@@ -192,20 +198,53 @@ const UploadAndSignPdf: React.FC = () => {
 
     useEffect(() => { fetchUnallocatedFiles() }, [fetchUnallocatedFiles])
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                const sigsRaw = localStorage.getItem('signatures_r2') || '[]'
-                const parsed = JSON.parse(sigsRaw)
-                if (Array.isArray(parsed)) setSavedSignatures(parsed.map((s: any) => ({ id: s.id, r2Url: s.url || s.r2Url, name: s.name, createdAt: s.createdAt })))
-            } catch {}
-            try {
-                const stmpsRaw = localStorage.getItem('stamps_r2') || '[]'
-                const parsed2 = JSON.parse(stmpsRaw)
-                if (Array.isArray(parsed2)) setSavedStamps(parsed2.map((s: any) => ({ id: s.id, r2Url: s.url || s.r2Url, name: s.name, createdAt: s.createdAt })))
-            } catch {}
+    // Load signatures from database instead of localStorage
+    const loadSignatures = useCallback(async () => {
+        try {
+            const signaturesFromDB = await getUserSignatures();
+            
+            // Map API response to match expected interface
+            const mappedSignatures = signaturesFromDB.map(sig => ({
+                id: sig.id,
+                r2Url: sig.publicUrl, // API returns 'publicUrl'
+                name: sig.filename,
+                createdAt: sig.createdAt
+            }));
+            
+            setSavedSignatures(mappedSignatures);
+        } catch (error: any) {
+            console.error('Error loading signatures from database:', error);
+            // Fallback to empty array, don't show error to user as this is not critical
+            setSavedSignatures([]);
         }
-    }, [])
+    }, []);
+
+    // Load stamps from database instead of localStorage
+    const loadStamps = useCallback(async () => {
+        try {
+            const stampsFromDB = await getUserStamps();
+            
+            // Map API response to match expected interface
+            const mappedStamps = stampsFromDB.map(stamp => ({
+                id: stamp.id,
+                r2Url: stamp.publicUrl, // API returns 'publicUrl'
+                name: stamp.filename,
+                createdAt: stamp.createdAt
+            }));
+            
+            setSavedStamps(mappedStamps);
+        } catch (error: any) {
+            console.error('Error loading stamps from database:', error);
+            // Fallback to empty array, don't show error to user as this is not critical
+            setSavedStamps([]);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Load signatures and stamps from database
+        loadSignatures();
+        loadStamps();
+    }, [loadSignatures, loadStamps]);
 
     const handleFileSelectionChange = (keys: React.Key[]) => setSelectedFileIds(keys)
 
@@ -227,6 +266,7 @@ const UploadAndSignPdf: React.FC = () => {
         setSelectedReviewers([])
         setReviewerToAdd(null)
         setSelectedApprover(null)
+        setSubmissionComment('') // ADDED: Reset submission comment
         fetchAllReviewers()
         fetchApprovers()
     }
@@ -250,6 +290,7 @@ const UploadAndSignPdf: React.FC = () => {
             setApproverOptions([])
             setSelectedApprover(null)
             setPageDimensions({})
+            setSubmissionComment('') // ADDED: Reset submission comment
         }, 300)
     }
 
@@ -337,6 +378,7 @@ const UploadAndSignPdf: React.FC = () => {
         if (!processingFile) { message.error('No file selected for processing.'); return }
         if (placedItems.length === 0) { message.warning('Please add at least one item (signature, stamp, or QR placeholder).'); return; }
         if (!selectedReviewers || selectedReviewers.length === 0) { message.warning('Please add at least one reviewer.'); return }
+        if (!submissionComment.trim()) { message.warning('Please enter a submission comment.'); return; }
         // if (!selectedApprover) { message.warning('Please select a final approver.'); return; } // Making approver optional as per existing code
 
         setIsSavingLetter(true);
@@ -367,6 +409,7 @@ const UploadAndSignPdf: React.FC = () => {
                 reviewers: selectedReviewers,
                 approver: selectedApprover ?? undefined,
                 name: processingFile.name,
+                comment: submissionComment.trim(),
             };
 
             const saved = await apiRequest<SavedLetterResponse>('/letters/from-pdf-interactive', 'POST', payload);
@@ -422,7 +465,7 @@ const UploadAndSignPdf: React.FC = () => {
     ]
     const rowSelection = { selectedRowKeys: selectedFileIds, onChange: handleFileSelectionChange, type: 'checkbox' as const }
     // const canSaveChanges = placedItems.some(i => i.type === 'signature') && placedItems.some(i => i.type === 'stamp');
-    const canSaveChanges = placedItems.length > 0 && selectedReviewers.length > 0; // Allow saving if at least one item is placed and reviewers are selected
+    const canSaveChanges = placedItems.length > 0 && selectedReviewers.length > 0 && submissionComment.trim(); // Allow saving if at least one item is placed, reviewers are selected, and comment is provided
 
     return (
         <div className="space-y-6">
@@ -599,6 +642,23 @@ const UploadAndSignPdf: React.FC = () => {
                                 <List size="small" bordered dataSource={placedItems} renderItem={item => <List.Item actions={[<Button type="link" danger size="small" onClick={() => handleRemovePlacedItem(item.id)}>Remove</Button>]}><List.Item.Meta title={`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} on page ${item.pageNumber}`} /></List.Item>} />
                             </div>
                         )}
+                        
+                        {/* ADDED: Submission Comment Section */}
+                        <div>
+                            <Typography.Title level={5} style={{ marginBottom: 8 }}>Submission Comment (Required)</Typography.Title>
+                            <TextArea
+                                rows={3}
+                                placeholder="Enter your initial comment for this submission..."
+                                value={submissionComment}
+                                onChange={(e) => setSubmissionComment(e.target.value)}
+                                disabled={isSavingLetter}
+                                maxLength={500}
+                                showCount
+                            />
+                            <Typography.Text type="secondary" className="text-xs block mt-1">
+                                This comment will be visible to all reviewers and approvers.
+                            </Typography.Text>
+                        </div>
                         
                         {/* Reviewer and Approver sections */}
                         <div>

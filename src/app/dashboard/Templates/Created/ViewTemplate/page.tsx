@@ -4,12 +4,13 @@ import React, { useState, useEffect, useMemo, Fragment, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { API_URL } from '@/app/config';
 import { message, Spin, Card, Typography, Button, Alert, Modal, Tag, Divider, Select, Avatar, Empty, Checkbox, Table, Tooltip } from 'antd'; 
-import { ExclamationCircleOutlined, DeleteOutlined, LeftOutlined, SaveOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, DeleteOutlined, LeftOutlined, SaveOutlined, ShareAltOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import CkeditorOzel from '../../../CreateLetter/ckeditor_letter';
+import { refreshFavoriteTemplates } from '@/components/Sidebar';
 
 interface TemplateData {
     id: string;
@@ -142,6 +143,22 @@ async function deleteShareRecordApi(shareId: string): Promise<void> {
     await axios.delete(`${API_URL}/templates/shares/${shareId}`, config);
 }
 
+async function toggleFavoriteApi(templateId: string): Promise<boolean> {
+    const config = getAuthHeaders();
+    const response = await axios.post(`${API_URL}/templates/${templateId}/favorite`, {}, config);
+    return response.data.isFavorite;
+}
+
+async function getFavoriteStatusApi(templateId: string): Promise<boolean> {
+    const config = getAuthHeaders();
+    try {
+        const response = await axios.get(`${API_URL}/templates/${templateId}/favorite`, config);
+        return response.data.isFavorite || false;
+    } catch (error) {
+        return false;
+    }
+}
+
 function ViewTemplateContent() {
     const [templateData, setTemplateData] = useState<TemplateData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -165,6 +182,9 @@ function ViewTemplateContent() {
     const [isFetchingHistory, setIsFetchingHistory] = useState(false);
 
     const [deletingShareId, setDeletingShareId] = useState<string | null>(null);
+
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -194,11 +214,13 @@ function ViewTemplateContent() {
                     const reviewersPromise = fetchReviewers(templateId);
                     const allUsersPromise = fetchAllUsersApi();
                     const historyPromise = fetchShareHistoryApi(templateId);
+                    const favoritePromise = getFavoriteStatusApi(templateId);
 
-                    const [fetchedReviewers, fetchedAllUsers, fetchedHistory] = await Promise.all([
+                    const [fetchedReviewers, fetchedAllUsers, fetchedHistory, favoriteStatus] = await Promise.all([
                         reviewersPromise,
                         allUsersPromise,
-                        historyPromise
+                        historyPromise,
+                        favoritePromise
                     ]);
 
                     const assignedReviewers = fetchedReviewers || [];
@@ -207,6 +229,7 @@ function ViewTemplateContent() {
 
                     setAllUsers(fetchedAllUsers || []);
                     setShareHistory(fetchedHistory || []);
+                    setIsFavorite(favoriteStatus);
 
                 } catch (err: any) {
                     const errMsg = err.response?.data?.error || err.message || 'Məlumatları yükləyərkən xəta baş verdi.';
@@ -359,6 +382,24 @@ function ViewTemplateContent() {
         }
     };
 
+    const handleToggleFavorite = async () => {
+        if (!templateId) return;
+        setIsTogglingFavorite(true);
+        try {
+            const newFavoriteStatus = await toggleFavoriteApi(templateId);
+            setIsFavorite(newFavoriteStatus);
+            message.success(newFavoriteStatus ? 'Added to Favorite!' : 'Removed from Favorite!');
+            
+            // Refresh sidebar favorites
+            refreshFavoriteTemplates();
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.error || err.message || 'Favorite status error.';
+            message.error(errorMsg);
+        } finally {
+            setIsTogglingFavorite(false);
+        }
+    };
+
     const allUserIds = useMemo(() => allUsers.map(u => u.id), [allUsers]);
     const isCheckAll = useMemo(() => allUserIds.length > 0 && shareUserIds.length === allUserIds.length, [shareUserIds, allUserIds]);
     const isIndeterminate = useMemo(() => shareUserIds.length > 0 && shareUserIds.length < allUserIds.length, [shareUserIds, allUserIds]);
@@ -501,7 +542,17 @@ function ViewTemplateContent() {
                 <div className="flex justify-between items-center mb-6 flex-wrap gap-4 border-b pb-4">
                     <Button icon={<LeftOutlined />} onClick={() => router.push('/dashboard/Templates/Created')}> Siyahıya Qayıt </Button>
                     <Typography.Title level={4} className="mb-0 text-center flex-grow px-4 truncate" title={templateData.name || "Adsız Şablon"}> {templateData.name || "Adsız Şablon"} </Typography.Title>
-                    <Button icon={<ShareAltOutlined />} onClick={handleOpenShareModal}> Paylaş </Button>
+                    <div className="flex gap-2">
+                        <Button 
+                            icon={isFavorite ? <StarFilled /> : <StarOutlined />} 
+                            onClick={handleToggleFavorite}
+                            loading={isTogglingFavorite}
+                            type={isFavorite ? "primary" : "default"}
+                        > 
+                            {isFavorite ? 'Added' : 'Add to Favorite'} 
+                        </Button>
+                        <Button icon={<ShareAltOutlined />} onClick={handleOpenShareModal}> Paylaş </Button>
+                    </div>
                 </div>
 
                 <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8 text-sm font-serif leading-relaxed shadow-inner">

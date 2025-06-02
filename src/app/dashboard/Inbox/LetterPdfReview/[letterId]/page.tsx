@@ -7,12 +7,12 @@ import type { UploadFile, UploadProps } from 'antd';
 import {
     ArrowLeftOutlined, CheckOutlined, CloseOutlined, SendOutlined, HistoryOutlined,
     ZoomInOutlined, ZoomOutOutlined, UndoOutlined, InboxOutlined, SyncOutlined,
-    DeleteOutlined
+    DeleteOutlined, QrcodeOutlined
 } from '@ant-design/icons';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { getCurrentUser } from '@/utils/api'; 
+import { getCurrentUser, getUserSignatures, getUserStamps } from '@/utils/api'; 
 import { PDFDocument, PDFImage } from 'pdf-lib';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
@@ -107,6 +107,8 @@ const MIN_SCALE = 0.4;
 const MAX_SCALE = 3.0;
 const QR_PLACEHOLDER_COLOR = 'rgba(0, 150, 50, 0.7)';
 const QR_PLACEHOLDER_TEXT = 'QR';
+const QR_PLACEHOLDER_IDENTIFIER = 'QR_PLACEHOLDER_INTERNAL_ID';
+const DEFAULT_QR_PLACEHOLDER_PDF_UNITS = 50;
 
 export default function LetterPdfReviewPage() {
     const router = useRouter();
@@ -142,6 +144,7 @@ export default function LetterPdfReviewPage() {
     const [selectedStampUrl, setSelectedStampUrl] = useState<string | null>(null);
     const [isProcessingResubmit, setIsProcessingResubmit] = useState<boolean>(false);
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const [isPlacingQr, setIsPlacingQr] = useState<boolean>(false);
 
     // Store original page dimensions (scale 1) for correct percentage calculations
     const [pageDimensions, setPageDimensions] = useState<{ [key: number]: { width: number; height: number } }>({});
@@ -216,24 +219,53 @@ export default function LetterPdfReviewPage() {
         };
     }, [letterId]);
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                const sigsRaw = localStorage.getItem('signatures_r2');
-                const parsedSigs = sigsRaw ? JSON.parse(sigsRaw) : [];
-                if (Array.isArray(parsedSigs)) {
-                    setSavedSignatures(parsedSigs.map((s: any) => ({ id: s.id, r2Url: s.url || s.r2Url, name: s.name, createdAt: s.createdAt, })));
-                } else { setSavedSignatures([]); }
-            } catch (e) { console.error("Failed to load/parse signatures", e); setSavedSignatures([]); }
-            try {
-                const stmpsRaw = localStorage.getItem('stamps_r2');
-                const parsedStamps = stmpsRaw ? JSON.parse(stmpsRaw) : [];
-                if (Array.isArray(parsedStamps)) {
-                    setSavedStamps(parsedStamps.map((s: any) => ({ id: s.id, r2Url: s.url || s.r2Url, name: s.name, createdAt: s.createdAt, })));
-                } else { setSavedStamps([]); }
-            } catch (e) { console.error("Failed to load/parse stamps", e); setSavedStamps([]); }
+    // Load signatures from database instead of localStorage
+    const loadSignatures = useCallback(async () => {
+        try {
+            const signaturesFromDB = await getUserSignatures();
+            
+            // Map API response to match expected interface
+            const mappedSignatures = signaturesFromDB.map(sig => ({
+                id: sig.id,
+                r2Url: sig.publicUrl, // API returns 'publicUrl'
+                name: sig.filename,
+                createdAt: sig.createdAt
+            }));
+            
+            setSavedSignatures(mappedSignatures);
+        } catch (error: any) {
+            console.error('Error loading signatures from database:', error);
+            // Fallback to empty array, don't show error to user as this is not critical
+            setSavedSignatures([]);
         }
     }, []);
+
+    // Load stamps from database instead of localStorage
+    const loadStamps = useCallback(async () => {
+        try {
+            const stampsFromDB = await getUserStamps();
+            
+            // Map API response to match expected interface
+            const mappedStamps = stampsFromDB.map(stamp => ({
+                id: stamp.id,
+                r2Url: stamp.publicUrl, // API returns 'publicUrl'
+                name: stamp.filename,
+                createdAt: stamp.createdAt
+            }));
+            
+            setSavedStamps(mappedStamps);
+        } catch (error: any) {
+            console.error('Error loading stamps from database:', error);
+            // Fallback to empty array, don't show error to user as this is not critical
+            setSavedStamps([]);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Load signatures and stamps from database
+        loadSignatures();
+        loadStamps();
+    }, [loadSignatures, loadStamps]);
 
     useEffect(() => {
         if (isReassignModalVisible && letterDetails) {
@@ -615,6 +647,20 @@ export default function LetterPdfReviewPage() {
         message.info('Click on the PDF page to place the stamp.');
     };
 
+    const handleSelectQrCodeForPlacing = () => {
+        if (!isFinalApprovalSigningMode) return;
+        setPlacingItem({
+            type: 'qrcode',
+            url: QR_PLACEHOLDER_IDENTIFIER, // Special identifier for backend
+            width: DEFAULT_QR_PLACEHOLDER_PDF_UNITS, // Use PDF units for consistency
+            height: DEFAULT_QR_PLACEHOLDER_PDF_UNITS,
+        });
+        setSelectedSignatureUrl(null);
+        setSelectedStampUrl(null);
+        setIsPlacingQr(true); // Set QR placing state
+        message.info('Click on the PDF page to place the QR code placeholder.');
+    };
+
     const handlePdfAreaClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (!(isSigningMode || isFinalApprovalSigningMode) || !placingItem) return;
 
@@ -658,8 +704,10 @@ export default function LetterPdfReviewPage() {
             type: placingItem.type,
             url: placingItem.url || '',
             pageNumber,
-            xPct: Math.max(0, xPct),
-            yPct: Math.max(0, yPct),
+            // xPct: Math.max(0, xPct),
+            // yPct: Math.max(0, yPct),
+            xPct: Math.max(0, Math.min(xPct, 1 - widthPct)),
+            yPct: Math.max(0, Math.min(yPct, 1 - heightPct)),
             widthPct: widthPct,
             heightPct: heightPct
         };
@@ -668,6 +716,7 @@ export default function LetterPdfReviewPage() {
         setPlacingItem(null);
         setSelectedSignatureUrl(null);
         setSelectedStampUrl(null);
+        setIsPlacingQr(false);
         message.success(`${placingItem.type.charAt(0).toUpperCase() + placingItem.type.slice(1)} placed on page ${pageNumber}.`);
     }, [isSigningMode, placingItem, pageNumber, pdfScale, pageDimensions, isFinalApprovalSigningMode]);
 
@@ -900,7 +949,35 @@ export default function LetterPdfReviewPage() {
                                                             height: `${height}px`,
                                                         }}
                                                     >
-                                                        <img src={item.url} alt="Placed item" style={{ width: '100%', height: '100%' }} />
+                                                        {item.type === 'qrcode' ? (
+                                                            <div 
+                                                                style={{ 
+                                                                    width: '100%', 
+                                                                    height: '100%', 
+                                                                    backgroundColor: QR_PLACEHOLDER_COLOR,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    color: 'white',
+                                                                    fontWeight: 'bold',
+                                                                    border: '2px dashed white',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                                onClick={(e) => { e.stopPropagation(); handleRemovePlacedItem(item.id); }}
+                                                                title="QR Code Placeholder - Click to remove"
+                                                            >
+                                                                {QR_PLACEHOLDER_TEXT}
+                                                            </div>
+                                                        ) : (
+                                                            <img 
+                                                                src={item.url} 
+                                                                alt="Placed item" 
+                                                                style={{ width: '100%', height: '100%', cursor: 'pointer' }}
+                                                                onClick={(e) => { e.stopPropagation(); handleRemovePlacedItem(item.id); }}
+                                                                title="Click to remove"
+                                                            />
+                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -994,6 +1071,18 @@ export default function LetterPdfReviewPage() {
                                                 ))}
                                             </div>
                                         )}
+                                    </div>
+                                    <div>
+                                        <Typography.Title level={5} style={{ marginBottom: '8px' }}>Add QR Code Placeholder</Typography.Title>
+                                        <Tooltip title="Place QR code">
+                                            <Button
+                                                icon={<QrcodeOutlined />}
+                                                onClick={handleSelectQrCodeForPlacing}
+                                                type={isPlacingQr ? 'primary' : 'default'}
+                                            >
+                                                Add QR Placeholder
+                                            </Button>
+                                        </Tooltip>
                                     </div>
                                 </div>
                             )}

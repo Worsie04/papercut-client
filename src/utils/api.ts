@@ -735,6 +735,193 @@ export const uploadImage = async (file: File, type: 'logo' | 'signature' | 'stam
   }
 };
 
+// Signature API Functions
+export interface SignatureData {
+  id: string;
+  filename: string;
+  publicUrl: string;
+  signatureType: 'drawn' | 'uploaded';
+  createdAt: string;
+}
+
+export interface SignatureUploadResponse {
+  id: string;
+  publicUrl: string;
+  filename: string;
+  signatureType: 'drawn' | 'uploaded';
+  createdAt: string;
+}
+
+export const getUserSignatures = async (): Promise<SignatureData[]> => {
+  try {
+    console.log('API Call: GET /signatures');
+    const response = await typedApi.get('/signatures');
+    console.log('API Response (getUserSignatures):', response);
+    if (!response) {
+      throw new Error('API returned no response when fetching signatures.');
+    }
+    return response as SignatureData[];
+  } catch (error) {
+    console.error('Error in getUserSignatures:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data?.error || 'İmzaları yükləyərkən xəta baş verdi.');
+    }
+    throw new Error('İmzaları yükləyərkən naməlum xəta baş verdi.');
+  }
+};
+
+export const uploadSignature = async (file: File, signatureType: 'drawn' | 'uploaded' = 'uploaded'): Promise<SignatureUploadResponse> => {
+  const formData = new FormData();
+  formData.append('signatureFile', file);
+  formData.append('signatureType', signatureType);
+
+  try {
+    console.log(`API Call: POST /signatures (type: ${signatureType})`);
+    const response = await typedApi.post('/signatures', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+    console.log('API Response (uploadSignature):', response);
+    if (!response || !response.publicUrl || !response.id) {
+      throw new Error('Invalid response received from signature upload API.');
+    }
+    return response as SignatureUploadResponse;
+  } catch (error) {
+    console.error(`Error in uploadSignature (type: ${signatureType}):`, error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("Signature Upload API Error Response:", error.response.data);
+      throw new Error(error.response.data?.error || 'İmza yüklənərkən xəta baş verdi.');
+    }
+    throw new Error('İmza yüklənərkən naməlum xəta baş verdi.');
+  }
+};
+
+export const deleteSignature = async (signatureId: string): Promise<void> => {
+  try {
+    console.log(`API Call: DELETE /signatures/${signatureId}`);
+    await typedApi.delete(`/signatures/${signatureId}`);
+    console.log('API Response (deleteSignature): Success');
+  } catch (error) {
+    console.error(`Error in deleteSignature (ID: ${signatureId}):`, error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data?.error || 'İmza silinərkən xəta baş verdi.');
+    }
+    throw new Error('İmza silinərkən naməlum xəta baş verdi.');
+  }
+};
+
+export const getSignatureById = async (signatureId: string): Promise<SignatureData> => {
+  try {
+    console.log(`API Call: GET /signatures/${signatureId}`);
+    const response = await typedApi.get(`/signatures/${signatureId}`);
+    console.log('API Response (getSignatureById):', response);
+    if (!response) {
+      throw new Error('API returned no response when fetching signature.');
+    }
+    return response as SignatureData;
+  } catch (error) {
+    console.error(`Error in getSignatureById (ID: ${signatureId}):`, error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data?.error || 'İmza məlumatları əldə edilərkən xəta baş verdi.');
+    }
+    throw new Error('İmza məlumatları əldə edilərkən naməlum xəta baş verdi.');
+  }
+};
+
+// Stamp API Functions
+export interface StampData {
+  id: string;
+  filename: string;
+  publicUrl: string;
+  stampType: 'uploaded' | 'processed';
+  createdAt: string;
+}
+
+export interface StampUploadResponse {
+  id: string;
+  publicUrl: string;
+  filename: string;
+  stampType: 'uploaded' | 'processed';
+  createdAt: string;
+}
+
+export const getUserStamps = async (): Promise<StampData[]> => {
+  try {
+    console.log('API Call: GET /stamps');
+    const response = await typedApi.get('/stamps');
+    console.log('API Response (getUserStamps):', response);
+    if (!response) {
+      throw new Error('API returned no response when fetching stamps.');
+    }
+    return response as StampData[];
+  } catch (error) {
+    console.error('Error in getUserStamps:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data?.error || 'Möhürları yükləyərkən xəta baş verdi.');
+    }
+    throw new Error('Möhürları yükləyərkən naməlum xəta baş verdi.');
+  }
+};
+
+export const uploadStamp = async (file: File, stampType: 'uploaded' | 'processed' = 'uploaded'): Promise<StampUploadResponse> => {
+  const formData = new FormData();
+  formData.append('stampFile', file);
+  formData.append('stampType', stampType);
+
+  try {
+    console.log(`API Call: POST /stamps (type: ${stampType})`);
+    const response = await typedApi.post('/stamps', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+    console.log('API Response (uploadStamp):', response);
+    if (!response || !response.publicUrl || !response.id) {
+      throw new Error('Invalid response received from stamp upload API.');
+    }
+    return response as StampUploadResponse;
+  } catch (error) {
+    console.error(`Error in uploadStamp (type: ${stampType}):`, error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("Stamp Upload API Error Response:", error.response.data);
+      throw new Error(error.response.data?.error || 'Möhür yüklənərkən xəta baş verdi.');
+    }
+    throw new Error('Möhür yüklənərkən naməlum xəta baş verdi.');
+  }
+};
+
+export const deleteStamp = async (stampId: string): Promise<void> => {
+  try {
+    console.log(`API Call: DELETE /stamps/${stampId}`);
+    await typedApi.delete(`/stamps/${stampId}`);
+    console.log('API Response (deleteStamp): Success');
+  } catch (error) {
+    console.error(`Error in deleteStamp (ID: ${stampId}):`, error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data?.error || 'Möhür silinərkən xəta baş verdi.');
+    }
+    throw new Error('Möhür silinərkən naməlum xəta baş verdi.');
+  }
+};
+
+export const getStampById = async (stampId: string): Promise<StampData> => {
+  try {
+    console.log(`API Call: GET /stamps/${stampId}`);
+    const response = await typedApi.get(`/stamps/${stampId}`);
+    console.log('API Response (getStampById):', response);
+    if (!response) {
+      throw new Error('API returned no response when fetching stamp.');
+    }
+    return response as StampData;
+  } catch (error) {
+    console.error(`Error in getStampById (ID: ${stampId}):`, error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data?.error || 'Möhür məlumatları əldə edilərkən xəta baş verdi.');
+    }
+    throw new Error('Möhür məlumatları əldə edilərkən naməlum xəta baş verdi.');
+  }
+};
 
 export interface SharedTemplateData extends SavedTemplate {
   creator?: {
@@ -944,6 +1131,43 @@ export const addLetterComment = async (letterId: string, message: string, type?:
      }
 
      throw new Error('Paylaşılan şablonlar çəkilərkən naməlum xəta baş verdi.');
+  }
+};
+
+
+// Check placeholder details for user
+export interface PlaceholderDetails {
+  id: string;
+  name: string;
+  orgName: string;
+  type: string;
+  initialValue: string | null;
+  placeholder: string;
+  found: boolean;
+}
+
+export const checkPlaceholderDetails = async (placeholderName: string): Promise<PlaceholderDetails | null> => {
+  try {
+    console.log(`API Call: GET /placeholders/check/${placeholderName}`);
+    const response = await typedApi.get(`/placeholders/check/${placeholderName}`);
+    console.log(`API Response (checkPlaceholderDetails for ${placeholderName}):`, response);
+    
+    if (response) {
+      return response as PlaceholderDetails;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error checking placeholder details for ${placeholderName}:`, error);
+    
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      // Placeholder not found, return null
+      return null;
+    }
+    
+    // For other errors, log but don't throw to allow continuing with other placeholders
+    console.warn(`Could not check placeholder ${placeholderName}, continuing...`);
+    return null;
   }
 };
 

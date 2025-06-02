@@ -138,6 +138,7 @@ function TemplatePanel() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [templateName, setTemplateName] = useState<string>('');
+  const [selectedFieldType, setSelectedFieldType] = useState<string>('');
   const pathname = usePathname();
 
   if (!context) throw new Error('TemplatePanel must be used within a FormTemplateContext Provider');
@@ -147,6 +148,7 @@ function TemplatePanel() {
   const showModal = () => setIsModalVisible(true);
   const handleCancel = () => {
     setIsModalVisible(false);
+    setSelectedFieldType('');
     form.resetFields();
   };
 
@@ -154,12 +156,13 @@ function TemplatePanel() {
     try {
       const values = await form.validateFields();
       let { name, type, initialValue } = values;
+      const orgName = name;
       name = name.trim().replace(/\s+/g, '');
       const response = await fetch(`${API_URL}/placeholders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, type, initialValue: initialValue || null }),
+        body: JSON.stringify({ name,orgName, type, initialValue: initialValue || null }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -167,6 +170,7 @@ function TemplatePanel() {
       }
       const newField = await response.json();
       setCustomFields((prev) => [...prev, newField]);
+      setSelectedFieldType('');
       form.resetFields();
       message.success('Field created successfully');
     } catch (error: any) {
@@ -266,14 +270,28 @@ function TemplatePanel() {
             label="Field Type"
             rules={[{ required: true, message: 'Please select the field type!' }]}
           >
-            <Select>
+            <Select 
+              onChange={(value) => {
+                setSelectedFieldType(value);
+                form.setFieldsValue({ initialValue: '' });
+              }}
+            >
               {['Data', 'Time', 'Date and Time', 'Text', 'Dropdown', 'Number', 'Currency', 'Weight', 'Depletable Balance'].map((type) => (
                 <Select.Option key={type} value={type}>{type}</Select.Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="initialValue" label="Initial Value">
-            <Input />
+          <Form.Item
+            name="initialValue"
+            label="Initial Value"
+          >
+            <Input 
+              placeholder={
+                selectedFieldType === 'Dropdown' 
+                  ? 'Seçimlər üçün vergül ilə ayırın (misal: İbm,Amazon,Apple)' 
+                  : 'Default dəyər (opsional)'
+              } 
+            />
           </Form.Item>
           <Form.Item>
             <Button type="primary" onClick={handleCreateField}>
@@ -293,7 +311,7 @@ function TemplatePanel() {
                   </Button>,
                 ]}
               >
-                {field.name} - {field.type} - {field.placeholder}
+                {field.orgName} - {field.type} - {field.placeholder}
               </List.Item>
             )}
           />

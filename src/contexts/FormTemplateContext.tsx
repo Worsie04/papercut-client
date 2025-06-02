@@ -4,6 +4,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 export interface CustomField {
   id: string;
   name: string;
+  orgName: string;
   type: string;
   initialValue: string;
   placeholder: string;
