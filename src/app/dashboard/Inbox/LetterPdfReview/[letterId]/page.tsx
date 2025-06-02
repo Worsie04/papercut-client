@@ -1033,7 +1033,7 @@ export default function LetterPdfReviewPage() {
                     </Col>
                     <Col xs={24} lg={8}>
                         <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 space-y-4" style={{ display: 'flex', flexDirection: 'column', maxHeight: 'auto', overflowY: 'auto' }}>
-                            {isFinalApprovalSigningMode && (
+                            {(isFinalApprovalSigningMode || (isSigningMode && isSubmitterOfRejectedLetter)) && (
                                 <div className="border-b pb-4 mb-4 space-y-3">
                                     <Title level={5} style={{ marginBottom: '8px' }}>Select Signature & Stamp</Title>
                                     <div>
@@ -1072,22 +1072,40 @@ export default function LetterPdfReviewPage() {
                                             </div>
                                         )}
                                     </div>
-                                    <div>
-                                        <Typography.Title level={5} style={{ marginBottom: '8px' }}>Add QR Code Placeholder</Typography.Title>
-                                        <Tooltip title="Place QR code">
-                                            <Button
-                                                icon={<QrcodeOutlined />}
-                                                onClick={handleSelectQrCodeForPlacing}
-                                                type={isPlacingQr ? 'primary' : 'default'}
-                                            >
-                                                Add QR Placeholder
-                                            </Button>
-                                        </Tooltip>
-                                    </div>
+                                    {isFinalApprovalSigningMode && (
+                                        <div>
+                                            <Typography.Title level={5} style={{ marginBottom: '8px' }}>Add QR Code Placeholder</Typography.Title>
+                                            <Tooltip title="Place QR code">
+                                                <Button
+                                                    icon={<QrcodeOutlined />}
+                                                    onClick={handleSelectQrCodeForPlacing}
+                                                    type={isPlacingQr ? 'primary' : 'default'}
+                                                >
+                                                    Add QR Placeholder
+                                                </Button>
+                                            </Tooltip>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
-                            {!isSigningMode && letterDetails && (
+                            {(isSigningMode && isSubmitterOfRejectedLetter) && (
+                                <div className="border-b pb-4 mb-4">
+                                    <Title level={5} style={{ marginBottom: '8px' }}>Resubmit Comment</Title>
+                                    <TextArea
+                                        rows={3}
+                                        placeholder="Comment explaining changes (required)..."
+                                        value={resubmitComment}
+                                        onChange={(e) => setResubmitComment(e.target.value)}
+                                        disabled={isActionLoading || isProcessingResubmit}
+                                    />
+                                    <Text type="secondary" className='text-xs block mt-1'>
+                                        This comment will be saved when you resubmit the letter.
+                                    </Text>
+                                </div>
+                            )}
+
+                            {(!isSigningMode || isSubmitterOfRejectedLetter) && letterDetails && (
                                 <>
                                     <div>
                                         <Title level={5}>Workflow Status</Title>
