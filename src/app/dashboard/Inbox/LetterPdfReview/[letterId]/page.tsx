@@ -151,6 +151,16 @@ export default function LetterPdfReviewPage() {
 
     const pdfContainerRef = useRef<HTMLDivElement>(null); // Reference to the main PDF container
 
+    const getAuthHeaders = () => {
+        return {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            withCredentials: true
+        };
+    };
+
     useEffect(() => {
         const fetchUser = async () => {
             setIsUserLoading(true);
@@ -271,16 +281,48 @@ export default function LetterPdfReviewPage() {
         if (isReassignModalVisible && letterDetails) {
             const fetchUsers = async () => {
                 try {
-                    const allUsers = await apiRequest<UserInfo[]>('/users');
+                    let allUsers: UserInfo[] = [];
+                    
+                    // First, try using the apiRequest with /users/list endpoint
+                    try {
+                        console.log("Trying to fetch users with apiRequest...");
+                        const response = await apiRequest<{ users: UserInfo[], total: number, page: number, totalPages: number }>('/users/list?limit=1000');
+                        allUsers = response.users || [];
+                        console.log("Successfully fetched users with apiRequest:", allUsers.length);
+                    } catch (apiError: any) {
+                        console.warn("apiRequest failed, trying axios:", apiError.message);
+                        
+                        // Fallback to axios with proper headers
+                        try {
+                            const config = getAuthHeaders();
+                            const axiosResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/users/list?limit=1000`, config);
+                            allUsers = axiosResponse.data?.users || axiosResponse.data || [];
+                            console.log("Successfully fetched users with axios:", allUsers.length);
+                        } catch (axiosError: any) {
+                            console.error("Both apiRequest and axios failed:", axiosError);
+                            throw new Error("Failed to fetch users with both methods");
+                        }
+                    }
+                    
+                    if (!Array.isArray(allUsers) || allUsers.length === 0) {
+                        console.warn("No users returned or invalid format");
+                        setReassignOptions([]);
+                        return;
+                    }
+                    
                     const currentWorkflowUserIds = new Set(letterDetails.letterReviewers?.map(r => r.userId) ?? []);
                     currentWorkflowUserIds.add(letterDetails.userId);
                     if (letterDetails.nextActionById) currentWorkflowUserIds.add(letterDetails.nextActionById);
                     if (currentUser) {
                         currentWorkflowUserIds.add(currentUser.id);
                     }
+                    
                     const availableUsers = allUsers.filter(user => !currentWorkflowUserIds.has(user.id));
+                    console.log("Available users for reassignment:", availableUsers.length);
                     setReassignOptions(availableUsers);
+                    
                 } catch (err: any) {
+                    console.error("Error fetching users for reassignment:", err);
                     message.error("Failed to load users for reassignment.");
                     setReassignOptions([]);
                 }
