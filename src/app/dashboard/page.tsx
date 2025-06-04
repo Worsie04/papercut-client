@@ -102,7 +102,11 @@ const PaperCutHomeLayout = () => {
   }
 
   return (    
-        <div className="p-6">
+        <div className="p-6" style={{ 
+          height: '100%', 
+          overflowY: 'auto', 
+          overflowX: 'hidden' 
+        }}>
           {/* Temporary debug components - remove after testing */}
           <LayoutDebugger />
           <AuthDebugger />
