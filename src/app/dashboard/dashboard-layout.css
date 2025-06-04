@@ -1,0 +1,45 @@
+/* Dashboard Layout Styles */
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+  max-width: 100vw;
+  overflow: hidden;
+  position: relative;
+}
+
+.dashboard-layout .sidebar {
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.dashboard-layout .container-layout {
+  flex: 1;
+  min-width: 0; /* Important: allows flex item to shrink below content size */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-layout .navigation-bar {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Ensure smooth transitions */
+.dashboard-layout * {
+  box-sizing: border-box;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  
+  .dashboard-layout .sidebar {
+    position: fixed;
+    z-index: 1000;
+    height: auto;
+    max-height: 100vh;
+  }
+} 

@@ -10,17 +10,9 @@
     padding: 0 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    transition: left 0.3s ease;
-  }
-  
-  .sidebar + .navigation-bar{
-    width: calc(100% - 250px);
-    left: 250px;
-  }
-
-  .collapsed + .navigation-bar{
-    width: calc(100% - 80px);
-    left: 80px !important;
+    transition: all 0.3s ease;
+    width: 100%; /* Ensure navigation bar takes full width of its container */
+    max-width: 100%; /* Prevent overflow */
   }
   
   .navigation-logo {
@@ -66,8 +58,6 @@
     cursor: pointer;
   }
 
-
- 
   .navigation-actions .action-item {
     position: relative;
     cursor: pointer;
@@ -104,8 +94,6 @@
     background-color: #f5f5f5;
   }
   
-  
-
   .user-profile-header {
     display: flex;
     align-items: center;

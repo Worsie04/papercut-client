@@ -157,10 +157,21 @@ function LoginContent() {
       // Keep loading state true while redirecting
       setIsLoading(true);
       const returnUrl = searchParams?.get('from') || '/dashboard';
-      //window.location.href = '/dashboard';
       
-      // Use router.push - Next.js will handle the navigation
-     router.push(returnUrl);
+      // Use setTimeout to allow AuthContext to update first
+      setTimeout(() => {
+        // Force a hard refresh to ensure auth state is properly loaded
+        if (window.location.hostname.includes('render.com') || 
+            window.location.hostname.includes('vercel.app') ||
+            window.location.hostname.includes('papercut.website') ||
+            process.env.NODE_ENV === 'production') {
+          // In production, use window.location.href for more reliable navigation
+          window.location.href = returnUrl;
+        } else {
+          // In development, use router.push
+          router.push(returnUrl);
+        }
+      }, 1000); // Increased delay to allow cookie/auth state to sync
     }
   }, [loginSuccess, router, searchParams]);
 
@@ -206,7 +217,7 @@ function LoginContent() {
         setShowTwoFactorModal(true);
         setIsLoading(false);
       } else if (response?.accessToken) {
-        // Manual cookie təyin etmə (əlavə tədbir kimi)
+        // Set both httpOnly cookie (via server) and client-side backup
         Cookies.set('access_token_w', response.accessToken, { 
           secure: true,
           sameSite: 'none',
@@ -214,14 +225,31 @@ function LoginContent() {
           domain: window.location.hostname.includes('localhost') ? 'localhost' : undefined
         });
 
+        // Also store in localStorage as backup for production
+        if (window.location.hostname.includes('render.com') || 
+            window.location.hostname.includes('vercel.app') ||
+            window.location.hostname.includes('papercut.website') ||
+            process.env.NODE_ENV === 'production') {
+          localStorage.setItem('access_token_w', response.accessToken);
+        }
         
+        console.log('Login successful, cookies set, triggering redirect...');
         
-        console.log('Login successful, redirecting...');
+        // Trigger auth context refresh first
+        if (typeof window !== 'undefined') {
+          // Dispatch a custom event to force AuthContext to refresh
+          window.dispatchEvent(new CustomEvent('auth-success', { 
+            detail: { user: response.user, accessToken: response.accessToken }
+          }));
+        }
         
-        // Qısa bir gecikmə təyin edin - cookie'nin saxlanılmağına imkan verir
+        // Set success state with longer delay for production
         setTimeout(() => {
           setLoginSuccess(true);
-        }, 500);
+        }, window.location.hostname.includes('render.com') || 
+           window.location.hostname.includes('vercel.app') ||
+           window.location.hostname.includes('papercut.website') ||
+           process.env.NODE_ENV === 'production' ? 1500 : 500);
       } else {
         console.error('Login successful but no access token received');
         setError('Login successful but no access token received');

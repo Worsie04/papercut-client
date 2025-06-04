@@ -73,60 +73,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(refreshInterval);
   }, [user]);
 
+  // Listen for auth success events from login component
+  useEffect(() => {
+    const handleAuthSuccess = (event: CustomEvent) => {
+      console.log('Auth success event received:', event.detail);
+      const { user: newUser } = event.detail;
+      if (newUser) {
+        setUser(newUser);
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('auth-success', handleAuthSuccess as EventListener);
+    
+    return () => {
+      window.removeEventListener('auth-success', handleAuthSuccess as EventListener);
+    };
+  }, []);
+
   // Initial auth check
   useEffect(() => {
     checkAuth();
   }, []);
 
-  // const checkAuth = async () => {
-  //   try {
-  //     console.log('Checking authentication status...');
-  //     const response = await fetch(`${API_URL}/auth/verify`, {
-  //       credentials: 'include', // Important for sending cookies
-  //       headers: {
-  //         'Accept': 'application/json',
-  //         'Content-Type': 'application/json',
-  //       }
-  //     });
-
-  //     if (response.ok) {
-  //       const data = await response.json();
-  //       if (data.user) {
-  //         console.log('Authentication verified, user found');
-  //         setUser(data.user);
-  //       } else {
-  //         console.log('Authentication check: No user found');
-  //         setUser(null);
-  //         // Clear client-side cookie if server says no valid user
-  //         Cookies.remove('access_token_w');
-  //       }
-  //     } else {
-  //       console.log('Authentication check failed with status:', response.status);
-  //       // If token is invalid, clear everything
-  //       Cookies.remove('access_token_w');
-  //       setUser(null);
-  //     }
-  //   } catch (error) {
-  //     console.error('Auth check failed:', error);
-  //     Cookies.remove('access_token_w');
-  //     setUser(null);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
   const checkAuth = async () => {
     try {
       console.log('Checking authentication status...');
       console.log('Current cookies:', document.cookie);
       
-      // Daha spesifik xəta yoxlaması
+      // Check for both httpOnly cookie and localStorage token
+      const localToken = localStorage.getItem('access_token_w');
+      console.log('Local storage token:', localToken ? 'exists' : 'missing');
+      
+      // Try auth verify with longer timeout for production
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`${API_URL}/auth/verify`, {
         credentials: 'include',
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          // Include Authorization header if we have a local token
+          ...(localToken && { 'Authorization': `Bearer ${localToken}` })
         }
       });
+      
+      clearTimeout(timeoutId);
   
       if (response.ok) {
         const data = await response.json();
@@ -142,11 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           console.warn('Auth check: User data missing in response');
           setUser(null);
-          // Cookie təmizləmə
+          // Cookie və localStorage təmizləmə
           Cookies.remove('access_token_w', { 
             path: '/',
             domain: window.location.hostname.includes('localhost') ? 'localhost' : undefined 
           });
+          localStorage.removeItem('access_token_w');
         }
       } else {
         console.error('Authentication check failed with status:', response.status);
@@ -154,21 +149,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const errorText = await response.text();
         console.error('Auth check error response:', errorText);
         
-        // Cookie təmizləmə
+        // Cookie və localStorage təmizləmə
         Cookies.remove('access_token_w', { 
           path: '/',
           domain: window.location.hostname.includes('localhost') ? 'localhost' : undefined 
         });
+        localStorage.removeItem('access_token_w');
         setUser(null);
       }
     } catch (error) {
       console.error('Auth check failed with exception:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Auth check timed out');
+      }
       Cookies.remove('access_token_w');
+      localStorage.removeItem('access_token_w');
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
+
   const refreshToken = async (): Promise<string | null> => {
     try {
       console.log('Refreshing authentication token...');

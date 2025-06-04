@@ -1,16 +1,19 @@
 .container-layout {
     margin-top: 0px;
-    margin-left: 250px;
+    margin-left: 0px;
     padding: 0px;
-    transition: margin-left 0.3s ease;
+    transition: all 0.3s ease;
     background-color: #f9fafb;
     min-height: calc(100vh - 60px);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
   }
   
-  .collapsed + .container-layout{
-    margin-left: 80px;
-  }
-
   .actionCustom .desktop-actions {
     display: flex;
   }
@@ -65,14 +68,18 @@
     .container-layout {
       margin-left: 0;
       padding: 10px;
+      width: 100%;
+      max-width: 100%;
     }
   }
   
   @media (min-width: 768px) and (max-width: 1024px) {
 
     .container-layout {
-      margin-left: 200px;
+      margin-left: 0;
       padding: 0px;
+      width: 100%;
+      max-width: 100%;
     }
 
     .sidebar {
@@ -81,16 +88,6 @@
     .sidebar .sidebar-logo img{
       width: 90%;
       height: auto;
-    }
-
-    .sidebar + .navigation-bar{
-      width: calc(100% - 200px);
-      left: 200px;
-    }
-  
-    .collapsed + .navigation-bar{
-      width: calc(100% - 80px);
-      left: 80px !important;
     }
 
     .p-6 {
