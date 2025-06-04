@@ -108,8 +108,8 @@ const PaperCutHomeLayout = () => {
           overflowX: 'hidden' 
         }}>
           {/* Temporary debug components - remove after testing */}
-          <LayoutDebugger />
-          <AuthDebugger />
+          {/* <LayoutDebugger /> */}
+          {/* <AuthDebugger /> */}
           
           <h2 className="text-2xl font-semibold mb-4">
             Hello, {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Select, message, Spin, Button, Input } from 'antd';
 import { getTemplateDetailsForUser, fetchSharedTemplates, checkPlaceholderDetails, PlaceholderDetails } from '@/utils/api';
 import axios from 'axios';
 import { API_URL } from '@/app/config';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 //import './editor_ozel.css';
 import CkeditorOzel from './ckeditor_letter';
 
@@ -315,6 +315,36 @@ function LetterPreviewPanel({
   );
 }
 
+// Component to handle search params
+function SearchParamsHandler({ 
+  sharedTemplates, 
+  selectedTemplateId, 
+  setSelectedTemplateId 
+}: {
+  sharedTemplates: SharedTemplateData[];
+  selectedTemplateId: string | null;
+  setSelectedTemplateId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const templateIdFromUrl = searchParams.get('templateId');
+    if (templateIdFromUrl && sharedTemplates.length > 0 && !selectedTemplateId) {
+      // Check if the template exists in the shared templates list
+      const templateExists = sharedTemplates.some(template => template.id === templateIdFromUrl);
+      if (templateExists) {
+        console.log("Auto-selecting template from URL:", templateIdFromUrl);
+        setSelectedTemplateId(templateIdFromUrl);
+      } else {
+        console.warn("Template ID from URL not found in shared templates:", templateIdFromUrl);
+        message.warning("Selected template not found or not accessible.");
+      }
+    }
+  }, [searchParams, sharedTemplates, selectedTemplateId, setSelectedTemplateId]);
+
+  return null; // This component doesn't render anything
+}
+
 // Main Page Component
 export default function CreateLetterPage() {
   const [sharedTemplates, setSharedTemplates] = useState<SharedTemplateData[]>([]);
@@ -487,7 +517,14 @@ export default function CreateLetterPage() {
       }
     `}</style>
     
-
+    {/* Search Params Handler */}
+    <Suspense fallback={null}>
+      <SearchParamsHandler 
+        sharedTemplates={sharedTemplates}
+        selectedTemplateId={selectedTemplateId}
+        setSelectedTemplateId={setSelectedTemplateId}
+      />
+    </Suspense>
 
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
       {/* Template Selection */}

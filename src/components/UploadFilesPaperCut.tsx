@@ -623,7 +623,7 @@ const UploadAndSignPdf: React.FC = () => {
                         </div>
 
                         {/* ADDED: QR Code Placeholder Selection Button */}
-                        <div>
+                        {/* <div>
                             <Typography.Title level={5} style={{ marginBottom: 8 }}>Add QR Code Placeholder</Typography.Title>
                             <Button
                                 icon={<QrcodeOutlined />}
@@ -633,7 +633,7 @@ const UploadAndSignPdf: React.FC = () => {
                             >
                                 Add QR Placeholder ({`${DEFAULT_QR_PLACEHOLDER_PDF_UNITS}x${DEFAULT_QR_PLACEHOLDER_PDF_UNITS}`} units)
                             </Button>
-                        </div>
+                        </div> */}
 
 
                         {placedItems.length > 0 && (

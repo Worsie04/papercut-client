@@ -113,28 +113,13 @@ const Sidebar = () => {
 
   // Helper function to determine the correct link for a favorite template
   const getTemplateLink = (template) => {
-    if (!template || !currentUserId) {
-      console.log('No template or currentUserId, defaulting to Shared view', { template: template?.id, currentUserId });
-      return `/dashboard/Templates/Shared/ViewTemplate?templateId=${template.id}`;
+    if (!template) {
+      console.log('No template, defaulting to CreateLetter');
+      return `/dashboard/CreateLetter`;
     }
     
-    // If template belongs to current user, link to Created view
-    // If template belongs to someone else, link to Shared view
-    const isOwnTemplate = template.user && template.user.id === currentUserId;
-    
-    console.log('Template ownership check:', {
-      templateId: template.id,
-      templateName: template.name,
-      templateUserId: template.user?.id,
-      currentUserId,
-      isOwnTemplate
-    });
-    
-    if (isOwnTemplate) {
-      return `/dashboard/Templates/Created/ViewTemplate?templateId=${template.id}`;
-    } else {
-      return `/dashboard/Templates/Shared/ViewTemplate?templateId=${template.id}`;
-    }
+    // Always link to CreateLetter page with templateId parameter for favorite templates
+    return `/dashboard/CreateLetter?templateId=${template.id}`;
   };
 
   return (
