@@ -5,9 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 8080",
-    "lint": "next lint",
-    "test": "jest --passWithNoTests"
+    "start": "node_modules/next/dist/bin/next start -p 8080",
+    "lint": "next lint"
   },
   "dependencies": {
     "@ant-design/compatible": "^5.1.4",
