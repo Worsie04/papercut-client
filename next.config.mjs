@@ -2,11 +2,16 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
-  output: 'standalone',
+  // Azure üçün standalone output-u deaktiv edin
+  // output: 'standalone',
   experimental: {
     workerThreads: false,
     cpus: 1,
   },
+  // Azure üçün əlavə ayarlar
+  generateEtags: false,
+  poweredByHeader: false,
+  compress: true,
   async rewrites() {
     return [
       {
@@ -24,7 +29,6 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: 'https://papercut-backend-1.onrender.com' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT' },
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
-
           // Cache control başlıqları
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
           { key: 'Pragma', value: 'no-cache' },
@@ -34,5 +38,4 @@ const nextConfig = {
     ];
   },
 };
-
 export default nextConfig;
