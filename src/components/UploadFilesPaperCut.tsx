@@ -69,7 +69,7 @@ async function apiRequest<T>(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 
     const headers: HeadersInit = { 'Content-Type': 'application/json' }
     const config: RequestInit = { method, headers, credentials: 'include' }
     if (body) config.body = JSON.stringify(body)
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}${endpoint}`, config)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}${endpoint}`, config)
     if (!response.ok) {
         let errorData: any = { message: `HTTP error! status: ${response.status}` }
         try { errorData = await response.json() } catch {}
@@ -161,7 +161,7 @@ const UploadAndSignPdf: React.FC = () => {
                 autoProceed: true,
                 meta: { storage: 'cloudflare_r2', markAsUnallocated: true }
             }).use(XHRUpload, {
-                endpoint: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/files/upload`,
+                endpoint: `${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/files/upload`,
                 formData: true,
                 fieldName: 'files',
                 bundle: false,

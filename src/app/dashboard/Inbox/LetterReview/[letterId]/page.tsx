@@ -16,7 +16,7 @@ async function apiRequest<T = any>(endpoint: string, method: 'GET' | 'POST' | 'P
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     const config: RequestInit = { method, headers, credentials: 'include' };
     if (body) { config.body = JSON.stringify(body); }
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}${endpoint}`, config);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}${endpoint}`, config);
     if (!response.ok) {
         let errorData: any = { message: `HTTP error! Status: ${response.status}` };
         try { errorData = await response.json(); } catch (e) { }

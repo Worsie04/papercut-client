@@ -21,7 +21,7 @@ async function apiRequest<T = any>(endpoint: string, method: 'GET' | 'POST' | 'P
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     const config: RequestInit = { method, headers, credentials: 'include' };
     if (body) { config.body = JSON.stringify(body); }
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}${endpoint}`, config);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}${endpoint}`, config);
     if (!response.ok) {
         let errorData: any = { message: `HTTP error! Status: ${response.status}` };
         try { errorData = await response.json(); } catch (e) { }
@@ -101,7 +101,7 @@ interface PlacingItemInfo { type: 'signature' | 'stamp' | 'qrcode'; url?: string
 
 interface UploadedFileInfo { id: string; name: string; url: string; size: number; type: string; }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1';
 const ZOOM_STEP = 0.2;
 const MIN_SCALE = 0.4;
 const MAX_SCALE = 3.0;
@@ -295,7 +295,7 @@ export default function LetterPdfReviewPage() {
                         // Fallback to axios with proper headers
                         try {
                             const config = getAuthHeaders();
-                            const axiosResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/users/list?limit=1000`, config);
+                            const axiosResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/users/list?limit=1000`, config);
                             allUsers = axiosResponse.data?.users || axiosResponse.data || [];
                             console.log("Successfully fetched users with axios:", allUsers.length);
                         } catch (axiosError: any) {

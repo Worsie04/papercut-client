@@ -51,7 +51,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
         storage: 'cloudflare_r2'
       }
     }).use(XHRUpload, { 
-      endpoint: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/files/upload`,
+      endpoint: `${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/files/upload`,
       formData: true,
       fieldName: 'files',
       bundle: true,
@@ -136,7 +136,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   const fetchSpaces = async () => {
     try {
       setLoadingSpaces(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/spaces`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/spaces`, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -162,7 +162,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   const fetchCabinetsBySpace = async (spaceId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/cabinets/approved?spaceId=${spaceId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/cabinets/approved?spaceId=${spaceId}`, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -187,7 +187,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   // Fetch all cabinets
   const fetchCabinets = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/cabinets`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/cabinets`, {
         credentials: 'include'
       });
       
@@ -206,7 +206,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   const fetchUnallocatedFiles = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/files/unallocated`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/files/unallocated`, {
         credentials: 'include'
       });
       
@@ -233,7 +233,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   const fetchCabinetFields = async (cabinetId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/cabinets/${cabinetId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/cabinets/${cabinetId}`, {
         credentials: 'include'
       });
       
@@ -258,7 +258,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   const extractFieldsFromFile = async (fileId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/files/extract-fields/${fileId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/files/extract-fields/${fileId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -358,7 +358,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
       setLoading(true);
       
       // If files are already uploaded and we have their IDs, mark them as unallocated
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/files/unallocated/save`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/files/unallocated/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -408,7 +408,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
   const handleCabinetSelect = async (cabinetId) => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/cabinets/${cabinetId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/cabinets/${cabinetId}`, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -468,7 +468,7 @@ const UploadFiles = ({ onRecordCreated, onFilesUploaded }) => {
         fileIds: fileIds // Support for multiple files
       };
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/records/with-files`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/records/with-files`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

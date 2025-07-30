@@ -194,7 +194,7 @@ const Approvals = ({ className }) => {
       let response;
       
       if (record.type === 'cabinet') {
-        response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/cabinets/${record.id}/approve`, {
+        response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/cabinets/${record.id}/approve`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
