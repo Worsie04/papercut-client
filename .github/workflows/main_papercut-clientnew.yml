@@ -33,11 +33,11 @@ jobs:
           name: nextjs-app
           path: |
             .next
+            node_modules
             public
             package.json
             package-lock.json
             next.config.mjs
-            node_modules
 
   deploy:
     runs-on: ubuntu-latest
