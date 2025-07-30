@@ -97,7 +97,7 @@ const NavigationBar = () => {
     const fetchLetterDetails = async (letterId) => {
         const headers = { 'Content-Type': 'application/json' };
         const config = { method: 'GET', headers, credentials: 'include' };
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/letters/${letterId}`, config);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1'}/letters/${letterId}`, config);
         
         if (!response.ok) {
             let errorData = { message: `HTTP error! Status: ${response.status}` };

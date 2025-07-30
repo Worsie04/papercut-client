@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { message } from 'antd';
-//import { TemplateSectionData } from '@/app/dashboard/CreateForm/page';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1';
 
