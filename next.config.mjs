@@ -18,7 +18,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://papercut-backend-container.ambitiousmoss-ff53d/api/:path*',
+        destination: 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/:path*',
       },
     ];
   },
@@ -30,7 +30,7 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Allow-Origin', value: 'https://papercut-backend-container.ambitiousmoss-ff53d' },
+          { key: 'Access-Control-Allow-Origin', value: 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT' },
           {
             key: 'Access-Control-Allow-Headers',
