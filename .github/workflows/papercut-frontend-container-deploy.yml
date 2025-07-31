@@ -36,7 +36,7 @@ jobs:
           containerAppName: papercut-frontend-container
           resourceGroup: papercut-frontend-container-reg-group
           imageToBuild: papecutregisteryname.azurecr.io/papercut-frontend-container:${{ github.sha }}
-          targetPort: 80
+          targetPort: 3000
           ingress: external
           environmentVariables: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
