@@ -44,7 +44,12 @@ export const AuthContext = createContext<{
   refreshToken: async () => null,
 });
 
+// Debug environment variable
+console.log('AuthContext NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://papercut-backend-container.ambitiousmoss-ff53d51e.centralus.azurecontainerapps.io/api/v1';
+
+console.log('AuthContext API_URL final value:', API_URL);
 // Token refresh interval (15 minutes)
 const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000;
 

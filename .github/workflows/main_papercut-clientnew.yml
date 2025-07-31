@@ -23,10 +23,14 @@ jobs:
         run: |
           echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.production
           echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.local
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env
           echo "Created .env.production:"
           cat .env.production
           echo "Created .env.local:"
           cat .env.local
+          echo "Created .env:"
+          cat .env
+          echo "Environment variable value: ${{ secrets.NEXT_PUBLIC_API_URL }}"
 
       - name: npm install, build
         env:
@@ -51,6 +55,7 @@ jobs:
           cp package.json standalone-app/ || echo "No package.json found"
           cp .env.production standalone-app/ || echo "No .env.production found"
           cp .env.local standalone-app/ || echo "No .env.local found"
+          cp .env standalone-app/ || echo "No .env found"
           # Check if server.js exists
           if [ -f "standalone-app/server.js" ]; then
             echo "server.js found"
