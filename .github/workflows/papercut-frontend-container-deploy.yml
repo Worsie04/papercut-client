@@ -1,0 +1,42 @@
+name: Deploy Frontend to Azure Container Apps
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/papercut-frontend-container-deploy.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:
+      
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.PAPERCUTFRONTEND_AZURE_CREDENTIALS }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          registryUrl: papecutregisteryname.azurecr.io
+          registryUsername: ${{ secrets.PAPERCUTFRONTEND_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.PAPERCUTFRONTEND_REGISTRY_PASSWORD }}
+          containerAppName: papercut-frontend-container
+          resourceGroup: papercut-frontend-container-reg-group
+          imageToBuild: papecutregisteryname.azurecr.io/papercut-frontend-container:${{ github.sha }}
+          targetPort: 80
+          ingress: external
+          environmentVariables: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
