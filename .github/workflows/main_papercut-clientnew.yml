@@ -37,19 +37,36 @@ jobs:
           echo "Build completed. Checking if API_URL is embedded:"
           grep -r "papercut-backend-container" .next/ || echo "API URL not found in build output"
 
+      - name: Copy standalone files
+        run: |
+          mkdir -p standalone-app
+          # Copy standalone output
+          cp -r .next/standalone/* standalone-app/ || echo "No standalone files found"
+          # Create .next directory structure
+          mkdir -p standalone-app/.next
+          cp -r .next/static standalone-app/.next/static || echo "No static files found"
+          # Copy public files
+          cp -r public standalone-app/public || echo "No public files found"
+          # Copy essential files
+          cp package.json standalone-app/ || echo "No package.json found"
+          cp .env.production standalone-app/ || echo "No .env.production found"
+          cp .env.local standalone-app/ || echo "No .env.local found"
+          # Check if server.js exists
+          if [ -f "standalone-app/server.js" ]; then
+            echo "server.js found"
+          else
+            echo "WARNING: server.js not found in standalone build"
+          fi
+          echo "Contents of standalone-app:"
+          ls -la standalone-app/
+          echo "Contents of standalone-app/.next:"
+          ls -la standalone-app/.next/ || echo "No .next directory"
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: nextjs-app
-          path: |
-            .next
-            node_modules
-            public
-            package.json
-            package-lock.json
-            next.config.mjs
-            .env.production
-            .env.local
+          path: standalone-app
 
   deploy:
     runs-on: ubuntu-latest
