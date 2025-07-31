@@ -19,9 +19,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '22.x'
-      - name: Create .env.production file
-        run: echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.production
-
+      - name: Create environment files
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.production
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.local
+          echo "Created .env.production:"
+          cat .env.production
+          echo "Created .env.local:"
+          cat .env.local
 
       - name: npm install, build
         env:
@@ -29,6 +34,8 @@ jobs:
         run: |
           npm install
           npm run build
+          echo "Build completed. Checking if API_URL is embedded:"
+          grep -r "papercut-backend-container" .next/ || echo "API URL not found in build output"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -41,6 +48,8 @@ jobs:
             package.json
             package-lock.json
             next.config.mjs
+            .env.production
+            .env.local
 
   deploy:
     runs-on: ubuntu-latest
@@ -60,3 +69,5 @@ jobs:
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_0071F9B1E31749C59BFBC2A31A220A06 }}
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
