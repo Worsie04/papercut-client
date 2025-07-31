@@ -38,5 +38,8 @@ jobs:
           imageToBuild: papecutregisteryname.azurecr.io/papercut-frontend-container:${{ github.sha }}
           targetPort: 3000
           ingress: external
+          resourcesConfiguration: |
+            cpu: 1.0
+            memory: 2.0Gi
           environmentVariables: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
