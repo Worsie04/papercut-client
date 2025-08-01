@@ -98,6 +98,8 @@ const UploadAndSignPdf: React.FC = () => {
     const [selectedStampUrl, setSelectedStampUrl] = useState<string | null>(null)
     // ADDED: State to track if QR placeholder selection is active for UI feedback
     const [isPlacingQr, setIsPlacingQr] = useState<boolean>(false);
+    // Mouse cursor preview state
+    const [mousePosition, setMousePosition] = useState<{x: number, y: number}>({x: 0, y: 0});
 
     const [approverOptions, setApproverOptions] = useState<UserOption[]>([])
     const [selectedApprover, setSelectedApprover] = useState<string | null>(null)
@@ -321,6 +323,16 @@ const UploadAndSignPdf: React.FC = () => {
         setIsPlacingQr(true); // Set QR placing state
     };
 
+    const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!placingItem) return;
+        const wrapper = event.currentTarget;
+        const rect = wrapper.getBoundingClientRect();
+        setMousePosition({
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+        });
+    };
+
     const handlePdfAreaClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (!placingItem || !processingFile) return
         const wrapper = event.currentTarget
@@ -513,7 +525,7 @@ const UploadAndSignPdf: React.FC = () => {
                             </Space>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-2 relative" onClick={handlePdfAreaClick} style={{ cursor: placingItem ? 'copy' : 'default' }}>
+                        <div className="flex-1 overflow-auto p-2 relative" onClick={handlePdfAreaClick} onMouseMove={handleMouseMove} style={{ cursor: 'default' }}>
                             {processingFile?.url ? (
                                 <>
                                     {pdfLoadError && <Alert message="Error loading PDF" description={pdfLoadError} type="error" showIcon className="m-4" />}
@@ -601,6 +613,52 @@ const UploadAndSignPdf: React.FC = () => {
                                                 );
                                             }
                                         })}
+                                        
+                                        {/* Cursor Preview Shadow */}
+                                        {placingItem && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: `${mousePosition.x}px`,
+                                                    top: `${mousePosition.y}px`,
+                                                    pointerEvents: 'none',
+                                                    zIndex: 1000,
+                                                    opacity: 0.7
+                                                }}
+                                            >
+                                                {placingItem.type === 'qrcode' ? (
+                                                    <div
+                                                        style={{
+                                                            width: '50px',
+                                                            height: '50px',
+                                                            border: `2px dashed ${QR_PLACEHOLDER_COLOR}`,
+                                                            backgroundColor: 'rgba(0, 150, 50, 0.2)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '12px',
+                                                            color: QR_PLACEHOLDER_COLOR,
+                                                            fontWeight: 'bold',
+                                                            boxSizing: 'border-box',
+                                                        }}
+                                                    >
+                                                        QR
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={placingItem.url}
+                                                        alt={placingItem.type}
+                                                        style={{
+                                                            width: placingItem.type === 'signature' ? '80px' : '60px',
+                                                            height: placingItem.type === 'signature' ? '35px' : '60px',
+                                                            objectFit: 'contain',
+                                                            border: '1px dashed rgba(128,128,128,0.5)',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        )}
                                     </Document>
                                 </>
                             ) : <div className="text-center p-10"><Typography.Text type="secondary">No PDF selected or URL missing.</Typography.Text></div>}
