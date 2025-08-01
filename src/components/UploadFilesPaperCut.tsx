@@ -358,14 +358,18 @@ const UploadAndSignPdf: React.FC = () => {
             return;
         }
 
-        // Calculate percentage position relative to the original page dimensions
-        const xPct = clickXOnPage / renderedW;
-        const yPct = clickYOnPage / renderedH;
-
         // Calculate placeholder width/height in percentage relative to original page dimensions
         // placingItem.width and placingItem.height are in PDF points (or a similar unit)
         const widthPct = placingItem.width / dims.width;
         const heightPct = placingItem.height / dims.height;
+
+        // Center the item at cursor position by adjusting click coordinates
+        const centeredXOnPage = clickXOnPage - (widthPct * renderedW) / 2;
+        const centeredYOnPage = clickYOnPage - (heightPct * renderedH) / 2;
+
+        // Calculate percentage position relative to the original page dimensions
+        const xPct = centeredXOnPage / renderedW;
+        const yPct = centeredYOnPage / renderedH;
 
         const newItem: PlacedItem = {
             id: uuidv4(),
@@ -623,7 +627,8 @@ const UploadAndSignPdf: React.FC = () => {
                                                     top: `${mousePosition.y}px`,
                                                     pointerEvents: 'none',
                                                     zIndex: 1000,
-                                                    opacity: 0.7
+                                                    opacity: 0.7,
+                                                    transform: 'translate(-50%, -50%)'
                                                 }}
                                             >
                                                 {placingItem.type === 'qrcode' ? (
